@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Ledger Book">
+<meta name="theme-color" content="#20263f">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📕</text></svg>">
+<title>Ledger Book</title>
+<style>
+  :root{
+    --accent:#20263f;
+    --bg:#f2f2f7;
+    --card:#ffffff;
+    --sep:#dcdce2;
+    --text:#1c1c1e;
+    --muted:#8a8a8e;
+    --green:#1c8a4b;
+    --danger:#d23b3b;
+    --paper:#fefaf0;
+    --rule:#8ea6d1;
+    --margin:#d65c5c;
+    --ink:#24262f;
+    --faint:#6b6b76;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;margin:0}
+  body{
+    background:#dfe1e8;color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;font-size:16px;
+  }
+  #app{
+    display:flex;flex-direction:column;height:100dvh;
+    max-width:640px;margin:0 auto;background:var(--bg);
+    box-shadow:0 0 40px rgba(0,0,0,.12);position:relative;overflow:hidden;
+  }
+
+  /* ---------- navbar ---------- */
+  .navbar{
+    flex:none;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;
+    gap:8px;padding:calc(env(safe-area-inset-top) + 10px) 12px 10px;
+    background:rgba(249,249,249,.94);backdrop-filter:blur(12px);
+    -webkit-backdrop-filter:blur(12px);border-bottom:.5px solid var(--sep);z-index:5;
+  }
+  .navbar h1{font-size:17px;font-weight:600;margin:0;text-align:center;white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis;max-width:60vw}
+  .navbar .left{justify-self:start;display:flex;gap:2px;min-width:44px}
+  .navbar .right{justify-self:end;display:flex;gap:2px;min-width:44px;justify-content:flex-end}
+  .btn{
+    background:none;border:none;color:var(--accent);font-size:17px;font-weight:500;
+    padding:8px 6px;border-radius:8px;cursor:pointer;font-family:inherit;line-height:1;
+  }
+  .btn.icon{font-size:22px;padding:4px 8px}
+  .btn:active{opacity:.5}
+
+  /* ---------- content ---------- */
+  .content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    padding-bottom:calc(env(safe-area-inset-bottom) + 20px)}
+  .content.paper{background:var(--paper);padding-bottom:0}
+
+  /* ---------- stat cards ---------- */
+  .stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;padding:14px 14px 4px}
+  .stats.two{grid-template-columns:1fr 1fr}
+  .stat{background:var(--card);border-radius:14px;padding:12px;min-width:0}
+  .stat .ic{font-size:16px}
+  .stat .v{font-size:20px;font-weight:800;margin-top:6px;font-variant-numeric:tabular-nums;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .stat .l{font-size:10.5px;color:var(--muted);margin-top:2px;line-height:1.2}
+
+  .sec-title{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;
+    padding:18px 18px 6px}
+  .sec-foot{font-size:12px;color:var(--muted);padding:6px 18px 6px;line-height:1.35}
+
+  /* ---------- grouped list ---------- */
+  .group{background:var(--card);margin:0 14px 8px;border-radius:12px;overflow:hidden}
+  .row{display:flex;align-items:center;gap:12px;padding:12px 14px;
+    border-bottom:.5px solid var(--sep);cursor:pointer;
+    -webkit-user-select:none;user-select:none;touch-action:manipulation}
+  .row:last-child{border-bottom:none}
+  .row.plain{cursor:default}
+  .row:active:not(.plain){background:#f2f2f7}
+  [role="button"]:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;border-radius:10px}
+  .row.danger{color:var(--danger);justify-content:center;font-weight:500}
+  .row.muted{color:var(--muted);cursor:default}
+  .grow{flex:1;min-width:0}
+  .t{font-size:16px;font-weight:600;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .s{font-size:12.5px;color:var(--muted);margin-top:2px;display:block;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .chev{color:#c4c4c9;font-size:20px;flex:none}
+  .ico{width:40px;height:40px;border-radius:10px;background:rgba(32,38,63,.12);
+    display:flex;align-items:center;justify-content:center;font-size:18px;flex:none}
+  .av{width:40px;height:40px;border-radius:50%;background:rgba(32,38,63,.12);
+    display:flex;align-items:center;justify-content:center;color:var(--accent);
+    font-size:13px;font-weight:700;flex:none}
+  .accent{color:var(--accent);font-weight:600}
+  .muted{color:var(--muted)}
+
+  /* ---------- inputs ---------- */
+  input,textarea{
+    width:100%;border:none;background:none;font-family:inherit;font-size:16px;
+    color:var(--text);padding:0;margin:0;outline:none;resize:none;
+  }
+  input::placeholder,textarea::placeholder{color:#b3b3b8}
+  input[type=date]{min-height:22px}
+  .row .fieldlabel{flex:none;color:var(--text)}
+  input.num{text-align:right;max-width:150px}
+
+  /* ---------- empty state ---------- */
+  .empty{text-align:center;padding:48px 28px;color:var(--muted)}
+  .empty .empty-ic{font-size:44px;margin-bottom:10px}
+  .empty h2{color:var(--text);font-size:19px;margin:0 0 8px}
+  .empty p{font-size:14.5px;line-height:1.5;margin:0 0 20px}
+  .primary{background:var(--accent);color:#fff;border:none;border-radius:12px;
+    padding:14px 18px;font-size:16px;font-weight:600;cursor:pointer;font-family:inherit}
+  .primary.block{width:100%}
+  .ghost{background:none;border:1.5px solid var(--sep);color:var(--accent);border-radius:12px;
+    padding:12px 18px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:10px}
+  .btn-like{display:inline-block;color:var(--accent);font-weight:600;cursor:pointer;font-size:15px}
+
+  /* ---------- catalogue grid ---------- */
+  .searchbar{padding:10px 14px 4px}
+  .searchbar input{background:#e3e3e8;border-radius:10px;padding:9px 12px;font-size:16px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:12px 14px}
+  .card{background:var(--card);border-radius:16px;padding:10px;cursor:pointer;
+    -webkit-user-select:none;user-select:none;touch-action:manipulation}
+  .card:active{opacity:.7}
+  .thumb{width:100%;height:104px;border-radius:12px;overflow:hidden;
+    background:linear-gradient(135deg,#dbe3f2,#c3cfe6);display:flex;align-items:center;
+    justify-content:center;font-size:26px;color:#7d8db0}
+  .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+  .thumb.sm{width:46px;height:46px;border-radius:8px;font-size:20px;flex:none}
+  .cn{font-size:13.5px;font-weight:600;margin-top:8px;line-height:1.25;color:var(--ink)}
+  .cp{font-size:12px;font-weight:600;color:var(--green);margin-top:5px}
+
+  /* ---------- ledger paper ---------- */
+  .ledger{position:relative;padding:16px 18px 20px}
+  .ledger:before{content:"";position:absolute;top:0;bottom:0;left:9px;width:1px;
+    background:rgba(214,92,92,.45)}
+  .cname{font-family:Georgia,"Times New Roman",serif;font-size:23px;font-weight:700;color:var(--ink)}
+  .cmeta{font-family:Georgia,serif;font-size:12.5px;color:var(--faint);margin-top:3px}
+  .ccount{font-family:Georgia,serif;font-size:13px;color:var(--faint);margin-top:12px}
+  .cnote{font-family:Georgia,serif;font-size:12px;color:var(--faint);margin-top:6px;line-height:1.4}
+  .caps{display:flex;justify-content:space-between;font-family:Georgia,serif;font-size:10px;
+    letter-spacing:.6px;text-transform:uppercase;color:var(--faint);margin-top:16px;
+    padding-bottom:5px;border-bottom:1px solid var(--rule)}
+  .line{padding:12px 0;border-bottom:1px solid var(--rule);font-family:Georgia,serif;
+    color:var(--ink);cursor:pointer;-webkit-user-select:none;user-select:none;
+    touch-action:manipulation}
+  .line:active{background:rgba(142,166,209,.12)}
+  .lrow{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .ldate{font-size:11.5px;color:var(--faint)}
+  .lprice{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--green)}
+  .lname{font-size:15.5px;font-weight:700;margin-top:4px}
+  .ldesc{font-size:11.5px;color:var(--faint);margin-top:4px;line-height:1.35;white-space:pre-wrap}
+  .lfoot{border-top:1.5px solid rgba(36,38,47,.55);margin-top:16px;padding-top:8px;
+    font-family:Georgia,serif;font-size:11.5px;color:var(--faint)}
+  .lempty{font-family:Georgia,serif;font-size:13.5px;color:var(--faint);
+    padding:26px 0;border-bottom:1px solid var(--rule)}
+  .addbar{position:sticky;bottom:0;padding:10px 14px calc(env(safe-area-inset-bottom) + 14px);
+    background:rgba(249,249,249,.96);backdrop-filter:blur(12px);
+    -webkit-backdrop-filter:blur(12px);border-top:.5px solid var(--sep)}
+
+  /* ---------- photo field ---------- */
+  .photobox{display:flex;gap:14px;align-items:flex-start;width:100%}
+  .photobox .big{width:96px;height:96px;border-radius:12px;overflow:hidden;flex:none;
+    background:linear-gradient(135deg,#dbe3f2,#c3cfe6);display:flex;align-items:center;
+    justify-content:center;font-size:30px;color:#7d8db0}
+  .photobox .big img{width:100%;height:100%;object-fit:cover;display:block}
+  .photobox .hint{font-size:11.5px;color:var(--muted);margin-top:8px;line-height:1.35}
+  .danger{color:var(--danger)}
+  .danger.small{font-size:14px;margin-top:8px;font-weight:600;cursor:pointer}
+
+  /* ---------- sheet ---------- */
+  .sheet{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;
+    z-index:50;align-items:flex-end;justify-content:center}
+  .sheet.open{display:flex}
+  .sheet-panel{background:#fff;width:100%;max-width:640px;border-radius:16px 16px 0 0;
+    max-height:82vh;overflow-y:auto;padding-bottom:env(safe-area-inset-bottom)}
+  .sheet-head{display:flex;align-items:center;justify-content:space-between;
+    padding:14px 16px;border-bottom:.5px solid var(--sep);position:sticky;top:0;
+    background:#fff;font-weight:600}
+  .sheet-body{padding:6px 0}
+  .sheet .row{border-bottom:.5px solid var(--sep)}
+  .sheet .row:last-child{border-bottom:none}
+  .sheet-actions{padding:8px 0}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="sheet" class="sheet"><div class="sheet-panel" id="sheetPanel"></div></div>
+
+<script>
+/* ============================================================
+   Ledger Book — offline web app
+   All data is stored in this device's localStorage.
+   ============================================================ */
+
+const STORAGE_KEY = 'ledgerbook.v1';
+
+const STATES = ["Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh","Goa",
+"Gujarat","Haryana","Himachal Pradesh","Jharkhand","Karnataka","Kerala","Madhya Pradesh",
+"Maharashtra","Manipur","Meghalaya","Mizoram","Nagaland","Odisha","Punjab","Rajasthan",
+"Sikkim","Tamil Nadu","Telangana","Tripura","Uttar Pradesh","Uttarakhand","West Bengal",
+"Andaman and Nicobar Islands","Chandigarh","Dadra and Nagar Haveli and Daman and Diu","Delhi",
+"Jammu and Kashmir","Ladakh","Lakshadweep","Puducherry"];
+
+/* ---------- state ---------- */
+let data = { customers: [], catalogue: [] };
+let pendingImage = null;   // photo being edited in the catalogue form
+let stack = [{ name: 'dashboard' }];
+
+const app = document.getElementById('app');
+const sheet = document.getElementById('sheet');
+const sheetPanel = document.getElementById('sheetPanel');
+const $ = (sel) => document.querySelector(sel);
+
+/* ---------- helpers ---------- */
+function uid(){
+  return (crypto && crypto.randomUUID)
+    ? crypto.randomUUID()
+    : 'id-' + Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
+function esc(v){
+  return String(v == null ? '' : v).replace(/[&<>"']/g, c => (
+    {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]
+  ));
+}
+function inr(n){
+  const v = Number(n) || 0;
+  try{
+    return new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',
+      minimumFractionDigits:0,maximumFractionDigits:2}).format(v);
+  }catch(e){ return '₹' + v; }
+}
+function numText(n){ return (Number.isInteger(n) ? String(n) : String(Number(n.toFixed(2)))); }
+function parseMoney(s){
+  const cleaned = String(s || '').replace(/[^0-9.]/g,'');
+  const v = parseFloat(cleaned);
+  return isNaN(v) ? 0 : v;
+}
+function todayISO(){
+  const d = new Date();
+  const p = (x) => String(x).padStart(2,'0');
+  return d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate());
+}
+function parseISO(s){
+  if(!s) return new Date();
+  const parts = String(s).slice(0,10).split('-');
+  if(parts.length === 3) return new Date(+parts[0], +parts[1]-1, +parts[2]);
+  return new Date(s);
+}
+function fmtDate(s){
+  try{
+    return parseISO(s).toLocaleDateString('en-GB',
+      {day:'2-digit',month:'short',year:'numeric'});
+  }catch(e){ return String(s); }
+}
+function displayName(c){
+  const n = (c.name||'').trim();
+  return n || 'Unnamed Customer';
+}
+function displayState(c){
+  const s = (c.state||'').trim();
+  return s || 'Unassigned';
+}
+function productName(p){
+  const n = (p.name||'').trim();
+  return n || 'Untitled Product';
+}
+function initials(name){
+  return displayName({name}).split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase();
+}
+function byName(a,b){
+  return productName(a).localeCompare(productName(b), undefined, {sensitivity:'base'});
+}
+function byCustomerName(a,b){
+  return displayName(a).localeCompare(displayName(b), undefined, {sensitivity:'base'});
+}
+
+/* ---------- queries ---------- */
+function allStates(){
+  const set = new Set(data.customers.map(displayState));
+  return [...set].sort((a,b)=>a.localeCompare(b, undefined, {sensitivity:'base'}));
+}
+function customersIn(state){
+  const s = String(state).toLowerCase();
+  return data.customers
+    .filter(c => displayState(c).toLowerCase() === s)
+    .sort(byCustomerName);
+}
+function findCustomer(id){ return data.customers.find(c => c.id === id); }
+function findProduct(id){ return data.catalogue.find(p => p.id === id); }
+function productCountIn(state){
+  return customersIn(state).reduce((a,c)=>a + c.products.length, 0);
+}
+function totalProducts(){
+  return data.customers.reduce((a,c)=>a + c.products.length, 0);
+}
+function suppliedSummary(limit){
+  const map = new Map(); // name -> Set(customerId)
+  for(const c of data.customers){
+    for(const p of c.products){
+      const key = productName(p);
+      if(!map.has(key)) map.set(key, new Set());
+      map.get(key).add(c.id);
+    }
+  }
+  return [...map.entries()]
+    .map(([name,set]) => ({name, count:set.size}))
+    .sort((a,b)=> b.count - a.count ||
+      a.name.localeCompare(b.name, undefined, {sensitivity:'base'}))
+    .slice(0, limit);
+}
+function searchCatalogue(q){
+  const list = [...data.catalogue].sort(byName);
+  const s = (q||'').trim().toLowerCase();
+  if(!s) return list;
+  return list.filter(p =>
+    productName(p).toLowerCase().includes(s) ||
+    (p.description||'').toLowerCase().includes(s));
+}
+
+/* ---------- persistence ---------- */
+function load(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      const parsed = JSON.parse(raw);
+      data.customers = Array.isArray(parsed.customers) ? parsed.customers : [];
+      data.catalogue = Array.isArray(parsed.catalogue) ? parsed.catalogue : [];
+      data.customers.forEach(c => { if(!Array.isArray(c.products)) c.products = []; });
+    }
+  }catch(e){ console.warn('Could not read saved data', e); }
+}
+function save(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }catch(e){
+    alert('Could not save on this device — storage may be full. ' +
+          'Try removing a product photo, or free up space.');
+  }
+}
+
+/* ---------- navigation ---------- */
+function current(){ return stack[stack.length-1]; }
+function go(view){
+  stack.push(view);
+  history.pushState({i: stack.length-1}, '');
+  render();
+}
+function replace(view){
+  stack[stack.length-1] = view;
+  render();
+}
+function backTo(predicate){
+  for(let i = stack.length-1; i >= 0; i--){
+    if(predicate(stack[i])){
+      const delta = i - (stack.length-1);
+      if(delta === 0) render(); else history.go(delta);
+      return;
+    }
+  }
+  history.go(-(stack.length-1));
+}
+window.addEventListener('popstate', (e) => {
+  const i = (e.state && typeof e.state.i === 'number') ? e.state.i : 0;
+  stack = stack.slice(0, i + 1);
+  if(stack.length === 0) stack = [{name:'dashboard'}];
+  render();
+});
+
+/* ---------- navbar ---------- */
+function navbar(title, opts){
+  opts = opts || {};
+  const left = opts.back ? '<button class="btn icon" data-act="back" aria-label="Back">‹</button>' : '';
+  const right = opts.actions || '';
+  return '<div class="navbar"><div class="left">' + left + '</div>' +
+         '<h1>' + esc(title) + '</h1>' +
+         '<div class="right">' + right + '</div></div>';
+}
+
+/* ============================================================
+   Views
+   ============================================================ */
+
+function stat(icon, value, label){
+  return '<div class="stat"><div class="ic">' + icon + '</div>' +
+         '<div class="v">' + esc(value) + '</div>' +
+         '<div class="l">' + esc(label) + '</div></div>';
+}
+
+/* ---------- Dashboard ---------- */
+function viewDashboard(){
+  const states = allStates();
+  const head = navbar('Dashboard');
+
+  if(data.customers.length === 0){
+    return head +
+      '<div class="content"><div class="empty">' +
+        '<div class="empty-ic">📕</div>' +
+        '<h2>No customers yet</h2>' +
+        '<p>Add your first customer to start recording the products you quote them.</p>' +
+        '<button class="primary" data-act="newCustomer">Add Customer</button>' +
+        '<div><button class="ghost" data-act="loadSample">Load sample data</button></div>' +
+        '<div><button class="ghost" data-act="openBackup">Restore from backup</button></div>' +
+      '</div></div>';
+  }
+
+  const supplied = suppliedSummary(5);
+
+  const stateRows = states.map(s => {
+    const list = customersIn(s);
+    const products = list.reduce((a,c)=>a + c.products.length, 0);
+    return '<div class="row" data-act="openState" data-state="' + esc(s) + '">' +
+      '<span class="ico">🗺️</span>' +
+      '<span class="grow"><span class="t">' + esc(s) + '</span>' +
+      '<span class="s">' + list.length + ' customer' + (list.length===1?'':'s') +
+      ' · ' + products + ' product' + (products===1?'':'s') + '</span></span>' +
+      '<span class="chev">›</span></div>';
+  }).join('');
+
+  const suppliedRows = supplied.length
+    ? supplied.map(p =>
+        '<div class="row muted"><span class="ico">📦</span>' +
+        '<span class="grow"><span class="t">' + esc(p.name) + '</span></span>' +
+        '<span class="s">' + p.count + ' customer' + (p.count===1?'':'s') + '</span></div>').join('')
+    : '<div class="row muted">No products quoted yet.</div>';
+
+  return head +
+    '<div class="content">' +
+      '<div class="stats">' +
+        stat('👥', data.customers.length, 'Total Customers') +
+        stat('🗺️', states.length, 'States') +
+        stat('📦', totalProducts(), 'Products Supplied') +
+      '</div>' +
+      '<div class="sec-title">Customers by State</div>' +
+      '<div class="group">' + stateRows + '</div>' +
+      '<div class="sec-foot">Tap a state to open its customers.</div>' +
+      '<div class="sec-title">Products Being Supplied</div>' +
+      '<div class="group">' + suppliedRows + '</div>' +
+      '<div class="sec-foot">Products quoted across every customer.</div>' +
+      '<div class="group"><div class="row" data-act="openBackup">' +
+        '<span class="grow accent">☁︎ Backup &amp; Restore</span>' +
+        '<span class="chev">›</span></div></div>' +
+      '<div class="sec-foot">Your records are stored on this device only.</div>' +
+    '</div>';
+}
+
+/* ---------- Customers in a state ---------- */
+function viewState(v){
+  const s = v.state;
+  const list = customersIn(s);
+  const products = list.reduce((a,c)=>a + c.products.length, 0);
+
+  const rows = list.length
+    ? list.map(c =>
+        '<div class="row" data-act="openCustomer" data-id="' + c.id + '">' +
+        '<span class="av">' + esc(initials(c.name)) + '</span>' +
+        '<span class="grow"><span class="t">' + esc(displayName(c)) + '</span>' +
+        '<span class="s">' + c.products.length + ' product' + (c.products.length===1?'':'s') +
+        (c.phone ? ' · ' + esc(c.phone) : '') + '</span></span>' +
+        '<span class="chev">›</span></div>').join('')
+    : '<div class="row muted">No customers in this state yet.</div>';
+
+  return navbar(s, {
+      back:true,
+      actions:
+        '<button class="btn icon" data-act="openCatalogue" aria-label="Catalogue">▦</button>' +
+        '<button class="btn icon" data-act="newCustomer" data-state="' + esc(s) + '" aria-label="Add customer">＋</button>'
+    }) +
+    '<div class="content">' +
+      '<div class="stats two">' +
+        stat('👥', list.length, 'Customers') +
+        stat('📦', products, 'Products') +
+      '</div>' +
+      '<div class="sec-title">Customers</div>' +
+      '<div class="group">' + rows + '</div>' +
+      '<div class="sec-foot">Tap a customer to open their products. ▦ opens the catalogue.</div>' +
+    '</div>';
+}
+
+/* ---------- Customer page (ledger paper) ---------- */
+function viewCustomer(v){
+  const c = findCustomer(v.id);
+  if(!c){
+    return navbar('Not found', {back:true}) +
+      '<div class="content"><div class="empty"><p>Customer not found.</p></div></div>';
+  }
+  const products = [...c.products].sort((a,b)=> parseISO(a.date) - parseISO(b.date));
+
+  const lines = products.length
+    ? products.map((p,i) =>
+        '<div class="line" data-act="editProduct" data-customer="' + c.id + '" data-id="' + p.id + '">' +
+          '<div class="lrow"><span class="ldate">' + (i+1) + '. ' + esc(fmtDate(p.date)) + '</span>' +
+          '<span class="lprice">' + esc(inr(p.price)) + '</span></div>' +
+          '<div class="lname">' + esc(productName(p)) + '</div>' +
+          ((p.description||'').trim() ? '<div class="ldesc">' + esc(p.description) + '</div>' : '') +
+        '</div>').join('')
+    : '<div class="lempty">No products yet. Tap “Add Product” to add the first one.</div>';
+
+  return navbar(displayName(c), {
+      back:true,
+      actions:'<button class="btn icon" data-act="customerMenu" data-id="' + c.id + '" aria-label="More">⋯</button>'
+    }) +
+    '<div class="content paper">' +
+      '<div class="ledger">' +
+        '<div class="cname">' + esc(displayName(c)) + '</div>' +
+        '<div class="cmeta">' + esc(displayState(c)) + (c.phone ? ' · ' + esc(c.phone) : '') + '</div>' +
+        (c.address ? '<div class="cmeta">' + esc(c.address) + '</div>' : '') +
+        '<div class="ccount">' + products.length + ' product' + (products.length===1?'':'s') + ' quoted</div>' +
+        ((c.notes||'').trim() ? '<div class="cnote">' + esc(c.notes) + '</div>' : '') +
+        '<div class="caps"><span>Date · Product</span><span>Quoted Price</span></div>' +
+        lines +
+        '<div class="lfoot">' + products.length + ' product' + (products.length===1?'':'s') + ' recorded</div>' +
+      '</div>' +
+      '<div class="addbar"><button class="primary block" data-act="newProduct" data-customer="' + c.id + '">＋ Add Product</button></div>' +
+    '</div>';
+}
+
+/* ---------- Product form ---------- */
+function viewProductForm(v){
+  const c = findCustomer(v.customerId);
+  if(!c){
+    return navbar('Not found', {back:true}) + '<div class="content"></div>';
+  }
+  const p = v.productId ? c.products.find(x => x.id === v.productId) : null;
+  const isEdit = !!p;
+
+  return navbar(isEdit ? 'Edit Product' : 'New Product', {
+      back:true,
+      actions:'<button class="btn" data-act="saveProduct">Save</button>'
+    }) +
+    '<div class="content">' +
+      '<div class="group"><div class="row" data-act="openPicker">' +
+        '<span class="grow accent">▦ Choose from Catalogue</span></div></div>' +
+      '<div class="sec-title">Product</div>' +
+      '<div class="group"><div class="row plain">' +
+        '<input id="pName" placeholder="Product name" value="' + esc(p ? p.name : '') + '"></div></div>' +
+      '<div class="sec-title">Quoted Price</div>' +
+      '<div class="group"><div class="row plain">' +
+        '<span class="fieldlabel grow">Price</span><span class="muted">₹</span>' +
+        '<input id="pPrice" class="num" inputmode="decimal" placeholder="0" value="' +
+          (p && p.price ? esc(numText(p.price)) : '') + '"></div></div>' +
+      '<div class="sec-title">Description</div>' +
+      '<div class="group"><div class="row plain">' +
+        '<textarea id="pDesc" rows="4" placeholder="Specifications, size, material, warranty…">' +
+          esc(p ? p.description : '') + '</textarea></div></div>' +
+      '<div class="sec-title">Date quoted</div>' +
+      '<div class="group"><div class="row plain">' +
+        '<input id="pDate" type="date" value="' + esc(p ? String(p.date).slice(0,10) : todayISO()) + '"></div></div>' +
+      (isEdit
+        ? '<div class="group"><div class="row danger" data-act="deleteProduct" data-customer="' +
+            c.id + '" data-id="' + p.id + '">Delete Product</div></div>'
+        : '') +
+    '</div>';
+}
+
+/* ---------- Customer form ---------- */
+function viewCustomerForm(v){
+  const c = v.customerId ? findCustomer(v.customerId) : null;
+  const isEdit = !!c;
+  const preState = c ? c.state : (v.state || '');
+
+  return navbar(isEdit ? 'Edit Customer' : 'New Customer', {
+      back:true,
+      actions:'<button class="btn" data-act="saveCustomer">Save</button>'
+    }) +
+    '<div class="content">' +
+      '<div class="sec-title">Customer</div>' +
+      '<div class="group">' +
+        '<div class="row plain"><input id="cName" placeholder="Customer name" value="' + esc(c ? c.name : '') + '"></div>' +
+        '<div class="row plain"><input id="cPhone" type="tel" placeholder="Phone" value="' + esc(c ? c.phone : '') + '"></div>' +
+      '</div>' +
+      '<div class="sec-title">State</div>' +
+      '<div class="group"><div class="row plain">' +
+        '<input id="cState" list="statesList" placeholder="Select a state" value="' + esc(preState) + '"></div></div>' +
+      '<datalist id="statesList">' +
+        STATES.map(s => '<option value="' + esc(s) + '"></option>').join('') +
+      '</datalist>' +
+      '<div class="sec-title">Address</div>' +
+      '<div class="group"><div class="row plain">' +
+        '<textarea id="cAddress" rows="2" placeholder="Address">' + esc(c ? c.address : '') + '</textarea></div></div>' +
+      '<div class="sec-title">Notes</div>' +
+      '<div class="group"><div class="row plain">' +
+        '<textarea id="cNotes" rows="2" placeholder="Notes">' + esc(c ? c.notes : '') + '</textarea></div></div>' +
+      (isEdit
+        ? '<div class="group"><div class="row danger" data-act="deleteCustomer" data-id="' +
+            c.id + '">Delete Customer</div></div>'
+        : '') +
+    '</div>';
+}
+
+/* ---------- Catalogue ---------- */
+function catalogueCards(list){
+  if(!list.length){
+    return '<div class="empty" style="grid-column:1/-1">' +
+      '<p>No products yet. Tap ＋ to add one.</p></div>';
+  }
+  return list.map(p =>
+    '<div class="card" data-act="editCatalogueProduct" data-id="' + p.id + '">' +
+      '<div class="thumb">' + (p.image ? '<img src="' + p.image + '" alt="">' : '🖼️') + '</div>' +
+      '<div class="cn">' + esc(productName(p)) + '</div>' +
+      '<div class="cp">' + esc(inr(p.price)) + '</div>' +
+    '</div>').join('');
+}
+function viewCatalogue(){
+  return navbar('Product Catalogue', {
+      back:true,
+      actions:'<button class="btn icon" data-act="newCatalogueProduct" aria-label="Add product">＋</button>'
+    }) +
+    '<div class="content">' +
+      '<div class="searchbar"><input id="catSearch" placeholder="Search products" ' +
+        'oninput="refreshCatalogueGrid()"></div>' +
+      '<div class="grid" id="catGrid">' + catalogueCards(searchCatalogue('')) + '</div>' +
+    '</div>';
+}
+function refreshCatalogueGrid(){
+  const grid = $('#catGrid');
+  const input = $('#catSearch');
+  if(grid && input) grid.innerHTML = catalogueCards(searchCatalogue(input.value));
+}
+
+/* ---------- Catalogue form ---------- */
+function viewCatalogueForm(v){
+  const p = v.productId ? findProduct(v.productId) : null;
+  const isEdit = !!p;
+  pendingImage = p ? (p.image || null) : null;
+
+  return navbar(isEdit ? 'Edit Product' : 'New Product', {
+      back:true,
+      actions:'<button class="btn" data-act="saveCatalogueProduct">Save</button>'
+    }) +
+    '<div class="content">' +
+      '<div class="sec-title">Photo</div>' +
+      '<div class="group"><div class="row plain"><div class="photobox">' +
+        '<div class="big" id="catPhotoPreview">' +
+          (pendingImage ? '<img src="' + pendingImage + '" alt="">' : '🖼️') + '</div>' +
+        '<div class="grow">' +
+          '<label class="btn-like" for="catPhoto" id="catPhotoLabel">📷 ' +
+            (pendingImage ? 'Change Photo' : 'Choose Photo') + '</label>' +
+          '<input type="file" id="catPhoto" accept="image/*" hidden>' +
+          (pendingImage ? '<div class="danger small" data-act="removePhoto">Remove Photo</div>' : '') +
+          '<div class="hint">Photos are shrunk and stored on this device.</div>' +
+        '</div>' +
+      '</div></div></div>' +
+      '<div class="sec-title">Product</div>' +
+      '<div class="group"><div class="row plain">' +
+        '<input id="catName" placeholder="Product name" value="' + esc(p ? p.name : '') + '"></div></div>' +
+      '<div class="sec-title">Price</div>' +
+      '<div class="group"><div class="row plain">' +
+        '<span class="fieldlabel grow">Price</span><span class="muted">₹</span>' +
+        '<input id="catPrice" class="num" inputmode="decimal" placeholder="0" value="' +
+          (p && p.price ? esc(numText(p.price)) : '') + '"></div></div>' +
+      '<div class="sec-title">Description</div>' +
+      '<div class="group"><div class="row plain">' +
+        '<textarea id="catDesc" rows="4" placeholder="Specifications, size, material, warranty…">' +
+          esc(p ? p.description : '') + '</textarea></div></div>' +
+      (isEdit
+        ? '<div class="group"><div class="row danger" data-act="deleteCatalogueProduct" data-id="' +
+            p.id + '">Delete Product</div></div>'
+        : '') +
+    '</div>';
+}
+
+/* ---------- render ---------- */
+function render(){
+  const v = current();
+  let html;
+  switch(v.name){
+    case 'state':          html = viewState(v); break;
+    case 'customer':       html = viewCustomer(v); break;
+    case 'productForm':    html = viewProductForm(v); break;
+    case 'customerForm':   html = viewCustomerForm(v); break;
+    case 'catalogue':      html = viewCatalogue(); break;
+    case 'catalogueForm':  html = viewCatalogueForm(v); break;
+    default:               html = viewDashboard();
+  }
+  app.innerHTML = html;
+  enhanceA11y(app);
+}
+
+/* ============================================================
+   Sheets
+   ============================================================ */
+function openSheet(html){
+  sheetPanel.innerHTML = html;
+  sheet.classList.add('open');
+  enhanceA11y(sheetPanel);
+}
+function closeSheet(){
+  sheet.classList.remove('open');
+  sheetPanel.innerHTML = '';
+}
+
+/* Make tappable rows real controls: reachable by keyboard and announced by
+   VoiceOver / screen readers as buttons. */
+function enhanceA11y(root){
+  root.querySelectorAll('[data-act], label[for]').forEach(el => {
+    if(el.tagName === 'BUTTON') return;
+    if(!el.hasAttribute('role')) el.setAttribute('role', 'button');
+    if(!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '0');
+  });
+}
+function keyActivate(e){
+  if(e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+  const el = e.target.closest('[data-act], label[for]');
+  if(!el || el.tagName === 'BUTTON') return;
+  e.preventDefault();
+  if(el.tagName === 'LABEL' && el.htmlFor){
+    const control = document.getElementById(el.htmlFor);
+    if(control) control.click();
+    return;
+  }
+  onAction(el.dataset.act, el, e);
+}
+app.addEventListener('keydown', keyActivate);
+sheet.addEventListener('keydown', keyActivate);
+sheet.addEventListener('click', (e) => {
+  if(e.target === sheet){ closeSheet(); return; }
+  const t = e.target.closest('[data-act]');
+  if(t) onAction(t.dataset.act, t, e);
+});
+
+/* ---------- catalogue picker ---------- */
+function openCataloguePicker(){
+  const list = searchCatalogue('');
+  const body = list.length
+    ? '<div class="sheet-body">' + list.map(p =>
+        '<div class="row" data-act="pickCatalogue" data-id="' + p.id + '">' +
+          '<div class="thumb sm">' + (p.image ? '<img src="' + p.image + '" alt="">' : '🖼️') + '</div>' +
+          '<span class="grow"><span class="t">' + esc(productName(p)) + '</span>' +
+          '<span class="s">' + esc(inr(p.price)) + '</span></span></div>').join('') + '</div>'
+    : '<div class="empty"><p>Catalogue is empty. Add products in the Product Catalogue first.</p></div>';
+  openSheet(
+    '<div class="sheet-head"><span>Choose Product</span>' +
+    '<button class="btn" data-act="closeSheet">Cancel</button></div>' + body);
+}
+
+/* ---------- customer menu ---------- */
+function openCustomerMenu(id){
+  const c = findCustomer(id);
+  if(!c) return;
+  openSheet(
+    '<div class="sheet-head"><span>' + esc(displayName(c)) + '</span>' +
+    '<button class="btn" data-act="closeSheet">Cancel</button></div>' +
+    '<div class="sheet-actions">' +
+      '<div class="row" data-act="editCustomer" data-id="' + id + '"><span class="grow">✏️ Edit Customer</span></div>' +
+      '<div class="row" data-act="share" data-id="' + id + '"><span class="grow">📤 Share List</span></div>' +
+      '<div class="row danger" data-act="deleteCustomer" data-id="' + id + '"><span>🗑 Delete Customer</span></div>' +
+    '</div>');
+}
+
+/* ---------- backup & restore ---------- */
+function openBackupSheet(){
+  const json = JSON.stringify(data);
+  const bytes = new Blob([json]).size;
+  const kb = bytes > 102400 ? (bytes/1024).toFixed(0) : (bytes/1024).toFixed(1);
+  const hasData = data.customers.length > 0 || data.catalogue.length > 0;
+  openSheet(
+    '<div class="sheet-head"><span>Backup &amp; Restore</span>' +
+    '<button class="btn" data-act="closeSheet">Done</button></div>' +
+    '<div class="sheet-body">' +
+      '<div class="row plain muted" style="display:block">' +
+        '<div class="s">' + data.customers.length + ' customer' +
+          (data.customers.length===1?'':'s') + ' · ' + data.catalogue.length +
+          ' catalogue product' + (data.catalogue.length===1?'':'s') + ' · about ' + kb +
+          ' KB stored on this device.</div>' +
+      '</div>' +
+      '<div class="row" data-act="exportBackup"><span class="grow accent">⤓ Export backup file</span></div>' +
+      '<label class="row" for="importFile"><span class="grow accent">⤒ Restore from a backup file</span>' +
+        '<input type="file" id="importFile" accept="application/json,.json" hidden></label>' +
+      (hasData
+        ? '<div class="row danger" data-act="eraseAll"><span>🗑 Erase all data</span></div>'
+        : '') +
+    '</div>');
+}
+function exportBackup(){
+  const text = JSON.stringify(data, null, 2);
+  const blob = new Blob([text], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'ledgerbook-backup-' + todayISO() + '.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+}
+function importBackup(file){
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    let parsed;
+    try{ parsed = JSON.parse(String(reader.result)); }
+    catch(e){ alert('That file could not be read as a Ledger Book backup.'); return; }
+    const customers = Array.isArray(parsed.customers) ? parsed.customers : null;
+    if(!customers){ alert('That file is not a Ledger Book backup.'); return; }
+    if(!confirm('Restore this backup? It replaces what is on this device now.')) return;
+    data.customers = customers;
+    data.catalogue = Array.isArray(parsed.catalogue) ? parsed.catalogue : [];
+    data.customers.forEach(c => { if(!Array.isArray(c.products)) c.products = []; });
+    save();
+    closeSheet();
+    stack = [{name:'dashboard'}];
+    history.replaceState({i:0}, '');
+    render();
+    alert('Backup restored.');
+  };
+  reader.onerror = () => alert('Could not open that file.');
+  reader.readAsText(file);
+}
+
+/* ============================================================
+   Photo handling
+   ============================================================ */
+function compressImage(file){
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const max = 900;
+      let w = img.naturalWidth || img.width;
+      let h = img.naturalHeight || img.height;
+      const scale = Math.min(1, max / Math.max(w, h));
+      w = Math.max(1, Math.round(w * scale));
+      h = Math.max(1, Math.round(h * scale));
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL('image/jpeg', 0.72));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('bad image')); };
+    img.src = url;
+  });
+}
+async function handlePhoto(file){
+  if(!file) return;
+  try{
+    const dataUrl = await compressImage(file);
+    pendingImage = dataUrl;
+    const prev = $('#catPhotoPreview');
+    if(prev) prev.innerHTML = '<img src="' + dataUrl + '" alt="">';
+    const label = $('#catPhotoLabel');
+    if(label) label.textContent = '📷 Change Photo';
+  }catch(e){ alert('Could not read that image. Please try another one.'); }
+}
+app.addEventListener('change', (e) => {
+  if(e.target && e.target.id === 'catPhoto') handlePhoto(e.target.files[0]);
+});
+sheet.addEventListener('change', (e) => {
+  if(e.target && e.target.id === 'importFile') importBackup(e.target.files[0]);
+});
+
+/* ============================================================
+   Sharing / export
+   ============================================================ */
+function ledgerText(c){
+  const products = [...c.products].sort((a,b)=> parseISO(a.date) - parseISO(b.date));
+  const out = [];
+  out.push('LEDGER BOOK');
+  out.push('============================================');
+  out.push('Customer : ' + displayName(c));
+  out.push('State    : ' + displayState(c));
+  if((c.phone||'').trim())   out.push('Phone    : ' + c.phone);
+  if((c.address||'').trim()) out.push('Address  : ' + c.address);
+  out.push('--------------------------------------------');
+  if(!products.length) out.push('(no products yet)');
+  products.forEach(p => {
+    out.push('');
+    out.push(fmtDate(p.date) + '  —  ' + productName(p));
+    out.push('   Quoted price: ' + inr(p.price));
+    if((p.description||'').trim()) out.push('   ' + p.description);
+  });
+  out.push('--------------------------------------------');
+  out.push('Products: ' + products.length);
+  return out.join('\n');
+}
+async function shareCustomer(c){
+  const text = ledgerText(c);
+  const safe = displayName(c).replace(/[^A-Za-z0-9]+/g,'_').replace(/^_+|_+$/g,'') || 'Ledger';
+  if(navigator.share){
+    try{ await navigator.share({title: displayName(c) + ' — Products', text}); return; }
+    catch(e){ /* user cancelled — fall through */ }
+  }
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    try{ await navigator.clipboard.writeText(text); alert('Copied to clipboard.'); return; }
+    catch(e){}
+  }
+  const blob = new Blob([text], {type:'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = safe + '_Products.txt';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+}
+
+/* ============================================================
+   Sample data
+   ============================================================ */
+function sampleData(){
+  const d = (n) => { const t = new Date(); t.setDate(t.getDate() - n); return todayISOOf(t); };
+  function todayISOOf(t){
+    const p = (x)=>String(x).padStart(2,'0');
+    return t.getFullYear()+'-'+p(t.getMonth()+1)+'-'+p(t.getDate());
+  }
+  return {
+    customers: [
+      { id: uid(), name:'Ravi Kumar', state:'Maharashtra', phone:'98200 11223',
+        address:'12 Marine Drive, Mumbai', notes:'Pays on delivery.', createdAt:new Date().toISOString(),
+        products:[
+          { id:uid(), date:d(12), name:'Basmati Rice 25 kg', price:2400,
+            description:'Premium long-grain aged basmati rice. Export quality, 25 kg laminated bag, shelf life 12 months.' },
+          { id:uid(), date:d(4), name:'Sunflower Oil 15 L', price:1850,
+            description:'Refined sunflower cooking oil, low cholesterol, rich in Vitamin E.' }
+        ]},
+      { id: uid(), name:'Priya Sharma', state:'Delhi', phone:'98110 44556',
+        address:'44 Connaught Place, New Delhi', notes:'Quarterly restock.', createdAt:new Date().toISOString(),
+        products:[
+          { id:uid(), date:d(20), name:'Stainless Steel Cookware Set', price:3299,
+            description:'5-piece triply stainless steel set with glass lids. Induction compatible, 5 year warranty.' },
+          { id:uid(), date:d(2), name:'Ceramic Dinner Set (18 pcs)', price:2150,
+            description:'Microwave and dishwasher safe, serves 6.' }
+        ]},
+      { id: uid(), name:'Anand Iyer', state:'Tamil Nadu', phone:'98400 77889',
+        address:'9 Anna Salai, Chennai', notes:'', createdAt:new Date().toISOString(),
+        products:[
+          { id:uid(), date:d(8), name:'Organic Turmeric Powder 1 kg', price:320,
+            description:'Certified organic, 5% curcumin, sealed food-grade pouch.' }
+        ]},
+      { id: uid(), name:'Meera Patel', state:'Gujarat', phone:'99250 33445',
+        address:'27 CG Road, Ahmedabad', notes:'', createdAt:new Date().toISOString(),
+        products:[
+          { id:uid(), date:d(6), name:'Cotton Bedsheet Set (King)', price:1450,
+            description:'300 thread count 100% cotton king size bedsheet with 2 pillow covers.' }
+        ]}
+    ],
+    catalogue: [
+      { id:uid(), name:'Basmati Rice 25 kg', price:2400, image:null,
+        description:'Premium long-grain aged basmati rice. Export quality, 25 kg laminated bag, shelf life 12 months.' },
+      { id:uid(), name:'Sunflower Oil 15 L', price:1850, image:null,
+        description:'Refined sunflower cooking oil, low cholesterol, rich in Vitamin E.' },
+      { id:uid(), name:'Organic Turmeric Powder 1 kg', price:320, image:null,
+        description:'Certified organic turmeric powder, 5% curcumin, sealed food-grade pouch.' },
+      { id:uid(), name:'Stainless Steel Cookware Set', price:3299, image:null,
+        description:'5-piece triply stainless steel set with glass lids. Induction compatible, 5 year warranty.' },
+      { id:uid(), name:'Cotton Bedsheet Set (King)', price:1450, image:null,
+        description:'300 thread count 100% cotton king size bedsheet with 2 pillow covers.' },
+      { id:uid(), name:'LED Panel Light 18 W', price:240, image:null,
+        description:'18 W square recessed LED panel light, cool daylight 6500K. 2 year replacement warranty.' }
+    ]
+  };
+}
+
+/* ============================================================
+   Actions
+   ============================================================ */
+function onAction(act, el, e){
+  const v = current();
+
+  switch(act){
+    case 'back':
+      history.back();
+      break;
+
+    case 'openState':
+      go({name:'state', state: el.dataset.state});
+      break;
+
+    case 'openCustomer':
+      go({name:'customer', id: el.dataset.id});
+      break;
+
+    case 'openCatalogue':
+      go({name:'catalogue'});
+      break;
+
+    case 'newCustomer':
+      go({name:'customerForm', state: el.dataset.state || ''});
+      break;
+
+    case 'editCustomer':
+      closeSheet();
+      go({name:'customerForm', customerId: el.dataset.id});
+      break;
+
+    case 'customerMenu':
+      openCustomerMenu(el.dataset.id);
+      break;
+
+    case 'share': {
+      const c = findCustomer(el.dataset.id);
+      closeSheet();
+      if(c) shareCustomer(c);
+      break;
+    }
+
+    case 'deleteCustomer': {
+      const c = findCustomer(el.dataset.id);
+      if(!c) break;
+      if(!confirm('Delete ' + displayName(c) + '? Their whole product list will be removed.')) break;
+      data.customers = data.customers.filter(x => x.id !== c.id);
+      save();
+      closeSheet();
+      backTo(view => view.name === 'state');
+      break;
+    }
+
+    case 'saveCustomer': {
+      const name = ($('#cName').value || '').trim();
+      if(!name){ alert('Please enter a customer name.'); return; }
+      const stateVal = ($('#cState').value || '').trim();
+      const phone = ($('#cPhone').value || '').trim();
+      const address = ($('#cAddress').value || '').trim();
+      const notes = ($('#cNotes').value || '').trim();
+
+      if(v.customerId){
+        const c = findCustomer(v.customerId);
+        if(c) Object.assign(c, {name, state:stateVal, phone, address, notes});
+      } else {
+        data.customers.push({
+          id: uid(), name, state: stateVal, phone, address, notes,
+          createdAt: new Date().toISOString(), products: []
+        });
+      }
+      save();
+      history.back();
+      break;
+    }
+
+    case 'newProduct':
+      go({name:'productForm', customerId: el.dataset.customer});
+      break;
+
+    case 'editProduct':
+      go({name:'productForm', customerId: el.dataset.customer, productId: el.dataset.id});
+      break;
+
+    case 'saveProduct': {
+      const c = findCustomer(v.customerId);
+      if(!c) return;
+      const name = ($('#pName').value || '').trim();
+      if(!name){ alert('Please enter a product name.'); return; }
+      const price = parseMoney($('#pPrice').value);
+      const description = ($('#pDesc').value || '').trim();
+      const date = $('#pDate').value || todayISO();
+
+      if(v.productId){
+        const p = c.products.find(x => x.id === v.productId);
+        if(p) Object.assign(p, {name, price, description, date});
+      } else {
+        c.products.push({id: uid(), name, price, description, date});
+      }
+      save();
+      history.back();
+      break;
+    }
+
+    case 'deleteProduct': {
+      const c = findCustomer(el.dataset.customer);
+      if(!c) break;
+      if(!confirm('Delete this product?')) break;
+      c.products = c.products.filter(x => x.id !== el.dataset.id);
+      save();
+      backTo(view => view.name === 'customer');
+      break;
+    }
+
+    case 'openPicker':
+      openCataloguePicker();
+      break;
+
+    case 'pickCatalogue': {
+      const p = findProduct(el.dataset.id);
+      if(p){
+        const n = $('#pName'), pr = $('#pPrice'), de = $('#pDesc');
+        if(n) n.value = p.name || '';
+        if(pr) pr.value = p.price ? numText(p.price) : '';
+        if(de) de.value = p.description || '';
+      }
+      closeSheet();
+      break;
+    }
+
+    case 'newCatalogueProduct':
+      go({name:'catalogueForm'});
+      break;
+
+    case 'editCatalogueProduct':
+      go({name:'catalogueForm', productId: el.dataset.id});
+      break;
+
+    case 'saveCatalogueProduct': {
+      const name = ($('#catName').value || '').trim();
+      if(!name){ alert('Please enter a product name.'); return; }
+      const price = parseMoney($('#catPrice').value);
+      const description = ($('#catDesc').value || '').trim();
+
+      if(v.productId){
+        const p = findProduct(v.productId);
+        if(p) Object.assign(p, {name, price, description, image: pendingImage});
+      } else {
+        data.catalogue.push({id: uid(), name, price, description, image: pendingImage});
+      }
+      save();
+      history.back();
+      break;
+    }
+
+    case 'deleteCatalogueProduct': {
+      if(!confirm('Delete this product from the catalogue?')) break;
+      data.catalogue = data.catalogue.filter(p => p.id !== el.dataset.id);
+      save();
+      backTo(view => view.name === 'catalogue');
+      break;
+    }
+
+    case 'removePhoto':
+      pendingImage = null;
+      if($('#catPhotoPreview')) $('#catPhotoPreview').innerHTML = '🖼️';
+      if($('#catPhotoLabel')) $('#catPhotoLabel').textContent = '📷 Choose Photo';
+      if(el) el.remove();
+      break;
+
+    case 'loadSample': {
+      if(!confirm('Load sample customers and products? This replaces what is stored now.')) break;
+      data = sampleData();
+      save();
+      replace({name:'dashboard'});
+      break;
+    }
+
+    case 'openBackup':
+      openBackupSheet();
+      break;
+
+    case 'exportBackup':
+      exportBackup();
+      break;
+
+    case 'eraseAll': {
+      if(!confirm('Erase every customer, product and catalogue item on this device? This cannot be undone.')) break;
+      data = { customers: [], catalogue: [] };
+      save();
+      closeSheet();
+      stack = [{name:'dashboard'}];
+      history.replaceState({i:0}, '');
+      render();
+      break;
+    }
+
+    case 'closeSheet':
+      closeSheet();
+      break;
+  }
+}
+app.addEventListener('click', (e) => {
+  const t = e.target.closest('[data-act]');
+  if(t) onAction(t.dataset.act, t, e);
+});
+
+/* ============================================================
+   Boot
+   ============================================================ */
+load();
+history.replaceState({i: 0}, '');
+render();
+</script>
+</body>
+</html>

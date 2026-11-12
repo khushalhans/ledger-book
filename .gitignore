@@ -1,0 +1,5 @@
+# Junk files that should never be published
+.DS_Store
+Thumbs.db
+desktop.ini
+*.log
